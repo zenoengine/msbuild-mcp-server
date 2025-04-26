@@ -1,0 +1,3 @@
+fastmcp>=2.0
+uv
+vswhere>=1.0.0
