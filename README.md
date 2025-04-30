@@ -40,7 +40,7 @@ Use the same configuration snippet for all MCP clients:
 ```
 
 Place this snippet in your client configuration file:
-- **VSCode**: `.vscode/settings.json`
+- [**VSCode**](https://code.visualstudio.com/docs/copilot/chat/mcp-servers): `.vscode/mcp.json`
 - **Cursor**: `~/.cursor/mcp.json` or `<project-root>/.cursor/mcp.json`
 - **Windsurf**: `~/.codeium/windsurf/mcp_config.json`
 
