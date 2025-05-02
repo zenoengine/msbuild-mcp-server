@@ -77,17 +77,15 @@ def build_msbuild_project(
         result = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,  # Capture stderr separately
             text=True,
-            check=True,
             encoding="utf-8"
         )
-        # Filter success message
-        return "Build succeeded."
-    except subprocess.CalledProcessError as e:
-        # Filter error messages
-        error_lines = [line for line in e.stdout.splitlines() if "error" in line.lower()]
-        return "Build failed with the following errors:\n" + "\n".join(error_lines)
+        # Combine stdout and stderr for full output
+        if result.returncode == 0:
+            return f"Build succeeded.\nOutput:\n{result.stdout}"
+        else:
+            return f"Build failed with errors.\nOutput:\n{result.stdout}\nErrors:\n{result.stderr}"
     except FileNotFoundError:
         return "MSBuild executable not found. Ensure MSBuild is installed and added to the PATH."
 
