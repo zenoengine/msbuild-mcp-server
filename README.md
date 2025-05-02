@@ -1,14 +1,14 @@
 # MSBuild MCP Server
 
-A lightweight MCP (Model Context Protocol) server for automating MSBuild projects and solutions builds. It dynamically locates MSBuild using the `vswhere` Python package and provides customizable build configuration options.
+A lightweight MCP (Model Context Protocol) server for automating MSBuild projects and solutions builds. It dynamically locates MSBuild and provides customizable build configuration options.
 
 ## Features
 
-- **Dynamic MSBuild Discovery**: Automatically detects the MSBuild executable using `vswhere`, ensuring compatibility with various Visual Studio installations.
-- **Customizable Build Settings**: Easily configure build options such as configuration, platform, verbosity level, parallel build CPU count, NuGet restore, and additional command-line arguments.
+- **Dynamic MSBuild Discovery**: Automatically detects the MSBuild executable, ensuring compatibility with various Visual Studio installations.
+- **Customizable Build Settings**: Easily configure build options such as configuration, platform, verbosity level, parallel build CPU count, NuGet restore, and additional command-line arguments through LLM-driven tool invocation.
 - **Clear Error Reporting**: Filters and presents concise, relevant error messages upon build failures.
-- **MCP Client Compatibility**: Integrates seamlessly with MCP clients, including VSCode, Cursor, Windsurf, and more.
-- **Cross-Language Support**: Works with MSBuild-compatible projects (.sln, .csproj, .vcxproj).
+- **MCP Client Compatibility**: Supports seamless integration with popular MCP clients such as VSCode, Cursor, Windsurf, and more. Configuration snippets for these clients are provided in the documentation.
+- **Cross-Language Support**: Supports MSBuild-compatible projects, including .sln, .csproj, and .vcxproj files, enabling builds for languages like C#, C++, and more across Windows platforms.
 
 ## Prerequisites
 
@@ -18,21 +18,19 @@ Ensure the following prerequisites are installed:
 - Visual Studio or Visual Studio Build Tools (for MSBuild)
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
 
-## MCP Client Setup
+## Registering the MCP Server
 
-Use the same configuration snippet for all MCP clients:
+Ensure `uv` is installed.
+
+In the MCP settings of your AI tools (e.g., Cursor, Windsurf, Claude Desktop, etc.), add the following configuration:
 
 ```json
 {
   "mcpServers": {
     "msbuild-mcp-server": {
-      "type": "stdio",
-      "command": "uv",
+      "command": "uvx",
       "args": [
-        "--directory",
-        "<path/to/cloned/msbuild-mcp-server>",
-        "run",
-        "server.py"
+        "msbuild-mcp-server@latest"
       ]
     }
   }
@@ -43,6 +41,8 @@ Place this snippet in your client configuration file:
 - [**VSCode**](https://code.visualstudio.com/docs/copilot/chat/mcp-servers): `.vscode/mcp.json`
 - **Cursor**: `~/.cursor/mcp.json` or `<project-root>/.cursor/mcp.json`
 - **Windsurf**: `~/.codeium/windsurf/mcp_config.json`
+
+Restart your tool to ensure that the `msbuild-mcp-server` and its provided tools are properly registered.
 
 ## License
 
