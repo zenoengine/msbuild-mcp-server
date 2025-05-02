@@ -81,11 +81,16 @@ def build_msbuild_project(
             text=True,
             encoding="utf-8"
         )
-        # Combine stdout and stderr for full output
+
+
         if result.returncode == 0:
-            return f"Build succeeded.\nOutput:\n{result.stdout}"
+            return f"Build succeeded."
         else:
-            return f"Build failed with errors.\nOutput:\n{result.stdout}\nErrors:\n{result.stderr}"
+            # Filter error messages from both stdout and stderr
+            error_lines_stdout = [line for line in result.stdout.splitlines() if "error" in line.lower()]
+            error_lines_stderr = [line for line in result.stderr.splitlines() if "error" in line.lower()]
+            filtered_errors = "\n".join(error_lines_stdout + error_lines_stderr)
+            return f"Build failed with errors.\nFiltered Errors:\n{filtered_errors}\nFull Output:\n{result.stdout}\nErrors:\n{result.stderr}"
     except FileNotFoundError:
         return "MSBuild executable not found. Ensure MSBuild is installed and added to the PATH."
 
