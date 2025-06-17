@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/zenoengine-msbuild-mcp-server-badge.png)](https://mseep.ai/app/zenoengine-msbuild-mcp-server)
+
 # MSBuild MCP Server
 
 A lightweight MCP (Model Context Protocol) server for automating MSBuild projects and solutions builds. It dynamically locates MSBuild and provides customizable build configuration options.
