@@ -44,6 +44,16 @@ Place this snippet in your client configuration file:
 
 Restart your tool to ensure that the `msbuild-mcp-server` and its provided tools are properly registered.
 
+# Agent Prompt Examples
+
+AI agents can trigger builds using natural language like:
+
+- **Basic Project Build**  
+  > *"Build this solution at `C:/Path/To/Project.sln` using `Release|x64`."*
+
+- **Unreal Engine Build**  
+  > *"Build the solution located at `C:/Projects/MyGame/MyGame.sln` using `Development Editor|Win64`."*
+
 ## License
 
 This project is licensed under the MIT License.
