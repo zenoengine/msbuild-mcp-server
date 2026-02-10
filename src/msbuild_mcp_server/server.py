@@ -146,7 +146,6 @@ def build_msbuild_project(
     if additional_args:
         cmd.extend(additional_args.split())
 
-    build_timeout = 600
     build_env = _get_build_environment()
 
     stdout_file = tempfile.NamedTemporaryFile(
@@ -165,20 +164,9 @@ def build_msbuild_project(
             env=build_env,
         )
 
-        try:
-            proc.wait(timeout=build_timeout)
-        except subprocess.TimeoutExpired:
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            proc.wait()
-            return f"Build timed out after {build_timeout} seconds."
-        finally:
-            stdout_file.close()
-            stderr_file.close()
+        proc.wait()
+        stdout_file.close()
+        stderr_file.close()
 
         with open(stdout_file.name, 'r', encoding='utf-8', errors='replace') as f:
             stdout = f.read()
