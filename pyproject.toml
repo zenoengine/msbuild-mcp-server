@@ -1,6 +1,6 @@
 [project]
 name = "msbuild-mcp-server"
-version = "0.1.1"
+dynamic = ["version"]
 description = "A lightweight MCP server for automating MSBuild projects and solutions builds."
 license = { text = "MIT" }
 readme = "README.md"
@@ -20,6 +20,9 @@ packages = ["msbuild_mcp_server"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
 
 [project.optional-dependencies]
 dev = [
