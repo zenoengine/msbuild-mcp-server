@@ -1,13 +1,83 @@
+import re
 import subprocess
+import sys
 import os
+import tempfile
+import logging
 from fastmcp import FastMCP
 from vswhere import get_latest_path
 
-# Create MCP server instance
+if sys.platform == "win32":
+    import winreg
+
+logger = logging.getLogger(__name__)
+
 mcp = FastMCP("MSBuild MCP Server")
 
-# Replace the find_msbuild function to use the vswhere Python package
-# and retrieve the latest MSBuild path dynamically.
+
+def _get_build_environment():
+    """
+    Reconstruct the full system environment from the Windows registry.
+
+    MCP stdio clients typically pass only a limited set of environment variables
+    (PATH, TEMP, APPDATA, etc.), which causes MSBuild's .NET SDK resolution to
+    fail or hang. This function reads the complete environment from the registry
+    so that MSBuild can locate all required SDKs and tools.
+    """
+    if sys.platform != "win32":
+        return None
+
+    env = {}
+
+    registry_keys = [
+        (winreg.HKEY_LOCAL_MACHINE,
+         r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+        (winreg.HKEY_CURRENT_USER,
+         r"Environment"),
+    ]
+
+    for root_key, sub_key in registry_keys:
+        try:
+            with winreg.OpenKey(root_key, sub_key) as key:
+                i = 0
+                while True:
+                    try:
+                        name, value, _ = winreg.EnumValue(key, i)
+                        i += 1
+                        if name.upper() == "PATH":
+                            existing = env.get("PATH", "")
+                            env["PATH"] = (existing + ";" + value) if existing else value
+                        else:
+                            env[name] = value
+                    except OSError:
+                        break
+        except OSError:
+            continue
+
+    if not env:
+        return None
+
+    result = os.environ.copy()
+    result.update(env)
+
+    def _expand(value, env_dict):
+        upper_dict = {k.upper(): v for k, v in env_dict.items()}
+
+        def _replace(m):
+            var_name = m.group(1).upper()
+            return upper_dict.get(var_name, m.group(0))
+
+        return re.sub(r'%([^%]+)%', _replace, value)
+
+    for _ in range(3):
+        expanded = {k: _expand(v, result) for k, v in result.items()}
+        if expanded == result:
+            break
+        result = expanded
+
+    return result
+
+
 def find_msbuild():
     """
     Use the vswhere Python package to locate the MSBuild executable.
@@ -23,6 +93,7 @@ def find_msbuild():
 
     return msbuild_path
 
+
 @mcp.tool()
 def build_msbuild_project(
     project_path: str,
@@ -30,7 +101,7 @@ def build_msbuild_project(
     platform: str = "x64",
     verbosity: str = "minimal",
     max_cpu_count: int = None,
-    restore: bool = True,
+    restore: bool = False,
     additional_args: str = ""
 ) -> str:
     """
@@ -56,16 +127,18 @@ def build_msbuild_project(
     msbuild = find_msbuild()
     cmd = [
         msbuild,
-        project_path,  # Updated from sln_path to project_path
+        project_path,
         f"/p:Configuration={configuration}",
         f"/p:Platform={platform}",
-        f"/verbosity:{verbosity}"
+        f"/verbosity:{verbosity}",
     ]
 
     if max_cpu_count:
         cmd.append(f"/maxcpucount:{max_cpu_count}")
     else:
-        cmd.append("/m")  # Default parallel build
+        cmd.append("/m")
+
+    cmd.append("/nodeReuse:false")
 
     if restore:
         cmd.append("/restore")
@@ -73,30 +146,66 @@ def build_msbuild_project(
     if additional_args:
         cmd.extend(additional_args.split())
 
+    build_timeout = 600
+    build_env = _get_build_environment()
+
+    stdout_file = tempfile.NamedTemporaryFile(
+        mode='w+', suffix='_msbuild_stdout.txt', delete=False, encoding='utf-8'
+    )
+    stderr_file = tempfile.NamedTemporaryFile(
+        mode='w+', suffix='_msbuild_stderr.txt', delete=False, encoding='utf-8'
+    )
+
     try:
-        result = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,  # Capture stderr separately
-            text=True,
-            encoding="utf-8"
+            stdin=subprocess.DEVNULL,
+            stdout=stdout_file,
+            stderr=stderr_file,
+            env=build_env,
         )
 
+        try:
+            proc.wait(timeout=build_timeout)
+        except subprocess.TimeoutExpired:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            proc.wait()
+            return f"Build timed out after {build_timeout} seconds."
+        finally:
+            stdout_file.close()
+            stderr_file.close()
 
-        if result.returncode == 0:
+        with open(stdout_file.name, 'r', encoding='utf-8', errors='replace') as f:
+            stdout = f.read()
+        with open(stderr_file.name, 'r', encoding='utf-8', errors='replace') as f:
+            stderr = f.read()
+
+        if proc.returncode == 0:
             return f"Build succeeded."
         else:
-            # Filter error messages from both stdout and stderr
-            error_lines_stdout = [line for line in result.stdout.splitlines() if "error" in line.lower()]
-            error_lines_stderr = [line for line in result.stderr.splitlines() if "error" in line.lower()]
+            error_lines_stdout = [line for line in stdout.splitlines() if "error" in line.lower()]
+            error_lines_stderr = [line for line in stderr.splitlines() if "error" in line.lower()]
             filtered_errors = "\n".join(error_lines_stdout + error_lines_stderr)
-            return f"Build failed with errors.\nFiltered Errors:\n{filtered_errors}\nFull Output:\n{result.stdout}\nErrors:\n{result.stderr}"
+            return f"Build failed with errors.\nFiltered Errors:\n{filtered_errors}\nFull Output:\n{stdout}\nErrors:\n{stderr}"
     except FileNotFoundError:
         return "MSBuild executable not found. Ensure MSBuild is installed and added to the PATH."
+    finally:
+        for path in [stdout_file.name, stderr_file.name]:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
 
 def main():
     """Entry point for the msbuild-mcp-server CLI."""
     mcp.run()
+
 
 if __name__ == "__main__":
     main()
