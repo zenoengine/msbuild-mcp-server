@@ -3,14 +3,11 @@ import subprocess
 import sys
 import os
 import tempfile
-import logging
 from fastmcp import FastMCP
 from vswhere import get_latest_path
 
 if sys.platform == "win32":
     import winreg
-
-logger = logging.getLogger(__name__)
 
 mcp = FastMCP("MSBuild MCP Server")
 
