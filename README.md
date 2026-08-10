@@ -1,3 +1,5 @@
+
+
 # MSBuild MCP Server
 
 A lightweight MCP (Model Context Protocol) server for automating MSBuild projects and solutions builds. It dynamically locates MSBuild and provides customizable build configuration options.
@@ -14,6 +16,7 @@ A lightweight MCP (Model Context Protocol) server for automating MSBuild project
 
 Ensure the following prerequisites are installed:
 
+- Windows 10 or later
 - Python 3.11 or higher
 - Visual Studio or Visual Studio Build Tools (for MSBuild)
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
@@ -57,4 +60,3 @@ AI agents can trigger builds using natural language like:
 ## License
 
 This project is licensed under the MIT License.
-
